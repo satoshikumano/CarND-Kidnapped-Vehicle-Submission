@@ -58,6 +58,24 @@ inline double dist(double x1, double y1, double x2, double y2) {
 	return sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
 }
 
+/*
+ * Convert particle coordinate to map coordinate.
+ * @param (xp, yp, heading) x, y coordinates and heading angle of the particle.
+ * @param (xc, yc) obserbations in the particle coordinates.
+ * @param (c_x, c_y) observations in the map coordinates.
+ */
+inline void convert_coordinate(double xp,
+							   double yp,
+							   double heading,
+							   double xc,
+							   double yc,
+							   double &xm,
+							   double &ym)
+{
+	xm = xp + cos(heading) * xc - sin(heading) * yc;
+	ym = yp + sin(heading) * xc + cos(heading) * yc;
+}
+
 inline double * getError(double gt_x, double gt_y, double gt_theta, double pf_x, double pf_y, double pf_theta) {
 	static double error[3];
 	error[0] = fabs(pf_x - gt_x);
