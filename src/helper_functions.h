@@ -76,6 +76,23 @@ inline void convert_coordinate(double xp,
 	ym = yp + sin(heading) * xc + cos(heading) * yc;
 }
 
+inline double calculateWeight(double xp,
+							  double yp,
+							  double xl,
+							  double yl,
+							  double std_x,
+							  double std_y)
+{
+	double denom = 2.0 * M_PI * std_x * std_y;
+	double dx = xp - xl;
+	double dy = yp - yl;
+	double dxSqrt = dx * dx;
+	double dySqrt = dy * dy;
+	double exponent = ((dxSqrt / (2.0 * std_x * std_x)) + (dySqrt / (2.0 * std_y * std_y))) * -1.0;
+	double numera = exp(exponent);
+	return numera/denom;
+}
+
 inline double * getError(double gt_x, double gt_y, double gt_theta, double pf_x, double pf_y, double pf_theta) {
 	static double error[3];
 	error[0] = fabs(pf_x - gt_x);
