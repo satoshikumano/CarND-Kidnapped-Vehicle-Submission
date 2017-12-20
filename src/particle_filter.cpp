@@ -100,6 +100,11 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 		double x_nearest;
 		double y_nearest;
 		double minDist = sensor_range * 10000000.0;
+
+		std::vector<int> associations;
+		std::vector<double> sense_x;
+		std::vector<double> sense_y;
+
 		for (auto obs : observations)
 		{
 			double xm = 0;
@@ -114,6 +119,17 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 					minDist = norm;
 					x_nearest = lmark.x_f;
 					y_nearest = lmark.y_f;
+					associations.clear();
+					sense_x.clear();
+					sense_y.clear();
+					associations.push_back(lmark.id_i);
+					sense_x.push_back(lmark.x_f);
+					sense_y.push_back(lmark.y_f);
+				}
+				if (norm == minDist) {
+					associations.push_back(lmark.id_i);
+					sense_x.push_back(lmark.x_f);
+					sense_y.push_back(lmark.y_f);
 				}
 			}
 		}
@@ -123,6 +139,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 		}
 		double weight = calculateWeight(p.x, p.y, x_nearest, y_nearest, std_landmark[0], std_landmark[1]);
 		p.weight = weight;
+		SetAssociations(p, associations, sense_x, sense_y);
 	}
 }
 
