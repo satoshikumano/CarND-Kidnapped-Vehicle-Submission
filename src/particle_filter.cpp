@@ -25,6 +25,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[])
 	//   x, y, theta and their uncertainties from GPS) and all weights to 1.
 	// Add random Gaussian noise to each particle.
 	// NOTE: Consult particle_filter.h for more information about this method (and others in this file).
+	std::cout << "init" << std::endl;
 	num_particles = 100;
 	default_random_engine gen;
 	double std_x = 2.0;
@@ -57,6 +58,7 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 	// NOTE: When adding noise you may find std::normal_distribution and std::default_random_engine useful.
 	//  http://en.cppreference.com/w/cpp/numeric/random/normal_distribution
 	//  http://www.cplusplus.com/reference/random/default_random_engine/
+	std::cout << "prediction" << std::endl;
 	default_random_engine gen;
 	for (int i = 0; i < num_particles; ++i)
 	{
@@ -80,6 +82,7 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::ve
 	//   observed measurement to this particular landmark.
 	// NOTE: this method will NOT be called by the grading code. But you will probably find it useful to
 	//   implement this method and use it as a helper during the updateWeights phase.
+	std::cout << "dataAssociation" << std::endl;
 }
 
 void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
@@ -95,6 +98,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 	//   and the following is a good resource for the actual equation to implement (look at equation
 	//   3.33
 	//   http://planning.cs.uiuc.edu/node99.html
+	std::cout << "updateWeights" << std::endl;
 	for (auto& p : particles)
 	{
 		double x_nearest;
@@ -140,6 +144,9 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 		double weight = calculateWeight(p.x, p.y, x_nearest, y_nearest, std_landmark[0], std_landmark[1]);
 		p.weight = weight;
 		weights.push_back(weight);
+		p.associations = associations;
+		p.sense_x = sense_x;
+		p.sense_y = sense_y;
 		SetAssociations(p, associations, sense_x, sense_y);
 	}
 }
@@ -149,6 +156,7 @@ void ParticleFilter::resample()
 	// TODO: Resample particles with replacement with probability proportional to their weight.
 	// NOTE: You may find std::discrete_distribution helpful here.
 	//   http://en.cppreference.com/w/cpp/numeric/random/discrete_distribution
+	std::cout << "resample" << std::endl;
 	default_random_engine gen;
 	discrete_distribution<> dd(weights.begin(), weights.end());
 	for (auto& p : particles) {
@@ -164,14 +172,16 @@ Particle ParticleFilter::SetAssociations(Particle &particle, const std::vector<i
 	// associations: The landmark id that goes along with each listed association
 	// sense_x: the associations x mapping already converted to world coordinates
 	// sense_y: the associations y mapping already converted to world coordinates
-
+	std::cout << "SetAssociations" << std::endl;
 	particle.associations = associations;
 	particle.sense_x = sense_x;
 	particle.sense_y = sense_y;
+	return particle;
 }
 
 string ParticleFilter::getAssociations(Particle best)
 {
+	std::cout << "getAssociations" << std::endl;
 	vector<int> v = best.associations;
 	stringstream ss;
 	copy(v.begin(), v.end(), ostream_iterator<int>(ss, " "));
@@ -190,6 +200,7 @@ string ParticleFilter::getSenseX(Particle best)
 }
 string ParticleFilter::getSenseY(Particle best)
 {
+	std::cout << "getSenseY" << std::endl;
 	vector<double> v = best.sense_y;
 	stringstream ss;
 	copy(v.begin(), v.end(), ostream_iterator<float>(ss, " "));

@@ -72,6 +72,7 @@ inline void convert_coordinate(double xp,
 							   double &xm,
 							   double &ym)
 {
+	std::cout << "convert_coordinate" << std::endl;
 	xm = xp + cos(heading) * xc - sin(heading) * yc;
 	ym = yp + sin(heading) * xc + cos(heading) * yc;
 }
@@ -83,6 +84,7 @@ inline double calculateWeight(double xp,
 							  double std_x,
 							  double std_y)
 {
+	std::cout << "calculateWeight" << std::endl;
 	double denom = 2.0 * M_PI * std_x * std_y;
 	double dx = xp - xl;
 	double dy = yp - yl;
