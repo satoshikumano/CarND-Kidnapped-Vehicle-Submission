@@ -60,8 +60,15 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 	for (auto &p : particles)
 	{
 		double new_theta = p.theta + yaw_rate * delta_t;
-		double cal_x = p.x + (velocity * (sin(new_theta) - sin(p.theta))) / yaw_rate;
-		double cal_y = p.y + (velocity * (cos(p.theta) - cos(new_theta))) / yaw_rate;
+		double cal_x = 0.0;
+		double cal_y = 0.0;
+		if (yaw_rate == 0) {
+			cal_x = p.x + (velocity * delta_t * sin(p.theta));
+			cal_y = p.y + (velocity * delta_t * cos(p.theta));
+		} else {
+			cal_x = p.x + (velocity * (sin(new_theta) - sin(p.theta))) / yaw_rate;
+			cal_y = p.y + (velocity * (cos(p.theta) - cos(new_theta))) / yaw_rate;
+		}
 		normal_distribution<double> dist_x(cal_x, std_pos[0]);
 		normal_distribution<double> dist_y(cal_y, std_pos[1]);
 		normal_distribution<double> dist_theta(new_theta, std_pos[2]);
