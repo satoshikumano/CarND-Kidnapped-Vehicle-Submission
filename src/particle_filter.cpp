@@ -19,6 +19,43 @@
 
 using namespace std;
 
+/*
+ * Convert particle coordinate to map coordinate.
+ * @param (xp, yp, heading) x, y coordinates and heading angle of the particle.
+ * @param (xc, yc) obserbations in the particle coordinates.
+ * @param (c_x, c_y) observations in the map coordinates.
+ */
+inline void convert_coordinate(double xp,
+							   double yp,
+							   double heading,
+							   double xc,
+							   double yc,
+							   double &xm,
+							   double &ym)
+{
+	std::cout << "convert_coordinate" << std::endl;
+	xm = xp + cos(heading) * xc - sin(heading) * yc;
+	ym = yp + sin(heading) * xc + cos(heading) * yc;
+}
+
+inline double calculateWeight(double xp,
+							  double yp,
+							  double xl,
+							  double yl,
+							  double std_x,
+							  double std_y)
+{
+	std::cout << "calculateWeight" << std::endl;
+	double denom = 2.0 * M_PI * std_x * std_y;
+	double dx = xp - xl;
+	double dy = yp - yl;
+	double dxSqrt = dx * dx;
+	double dySqrt = dy * dy;
+	double exponent = ((dxSqrt / (2.0 * std_x * std_x)) + (dySqrt / (2.0 * std_y * std_y))) * -1.0;
+	double numera = exp(exponent);
+	return numera/denom;
+}
+
 void ParticleFilter::init(double x, double y, double theta, double std[])
 {
 	// TODO: Set the number of particles. Initialize all particles to first position (based on estimates of
