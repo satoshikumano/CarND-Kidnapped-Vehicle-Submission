@@ -57,9 +57,8 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 	//  http://www.cplusplus.com/reference/random/default_random_engine/
 	std::cout << "prediction" << std::endl;
 	default_random_engine gen;
-	for (int i = 0; i < num_particles; ++i)
+	for (auto &p : particles)
 	{
-		Particle p = particles.at(i);
 		double new_theta = p.theta + yaw_rate * delta_t;
 		double cal_x = p.x + (velocity * (sin(new_theta) - sin(p.theta))) / yaw_rate;
 		double cal_y = p.y + (velocity * (cos(p.theta) - cos(new_theta))) / yaw_rate;
@@ -69,7 +68,6 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 		p.x = dist_x(gen);
 		p.y = dist_y(gen);
 		p.theta = dist_theta(gen);
-		particles.at(i) = p;
 	}
 }
 
