@@ -25,7 +25,7 @@ using namespace std;
  * @param (xc, yc) obserbations in the particle coordinates.
  * @param (c_x, c_y) observations in the map coordinates.
  */
-inline void convert_coordinate(double xp,
+inline void convertCoordinate(double xp,
 							   double yp,
 							   double heading,
 							   double xc,
@@ -33,27 +33,40 @@ inline void convert_coordinate(double xp,
 							   double &xm,
 							   double &ym)
 {
-	std::cout << "convert_coordinate" << std::endl;
+	// std::cout << "convertCoordinate" << std::endl;
 	xm = xp + cos(heading) * xc - sin(heading) * yc;
 	ym = yp + sin(heading) * xc + cos(heading) * yc;
 }
 
-inline double calculateWeight(double xp,
-							  double yp,
-							  double xl,
-							  double yl,
-							  double std_x,
-							  double std_y)
+inline double calculateSingleWeight(double xp,
+									double yp,
+									double xl,
+									double yl,
+									double std_x,
+									double std_y)
 {
-	std::cout << "calculateWeight" << std::endl;
-	double denom = 2.0 * M_PI * std_x * std_y;
+	double denom = 1 / (2.0 * M_PI * std_x * std_y);
 	double dx = xp - xl;
 	double dy = yp - yl;
 	double dxSqrt = dx * dx;
 	double dySqrt = dy * dy;
-	double exponent = ((dxSqrt / (2.0 * std_x * std_x)) + (dySqrt / (2.0 * std_y * std_y))) * -1.0;
+	double exponent = -((dxSqrt / (2.0 * std_x * std_x)) + (dySqrt / (2.0 * std_y * std_y)));
 	double numera = exp(exponent);
-	return numera/denom;
+	
+	double weight =  numera * denom;
+	std::cout << "calculateSingleWeight: " << weight << std::endl;
+	return weight;
+}
+
+inline double normalizeAngle(double angle)
+{
+	while (angle > M_PI) {
+		angle -= 2.0 * M_PI;
+	}
+	while (angle < -M_PI) {
+		angle += 2.0 * M_PI;
+	}
+	return angle;
 }
 
 void ParticleFilter::init(double x, double y, double theta, double std[])
@@ -63,7 +76,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[])
 	// Add random Gaussian noise to each particle.
 	// NOTE: Consult particle_filter.h for more information about this method (and others in this file).
 	std::cout << "init" << std::endl;
-	num_particles = 100;
+	num_particles = 10;
 	default_random_engine gen;
 	normal_distribution<double> dist_x(x, std[0]);
 	normal_distribution<double> dist_y(y, std[1]);
@@ -74,6 +87,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[])
 		sample_x = dist_x(gen);
 		sample_y = dist_y(gen);
 		sample_theta = dist_theta(gen);
+		sample_theta = normalizeAngle(sample_theta);
 		Particle p;
 		p.id = i;
 		p.x = sample_x;
@@ -97,6 +111,7 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 	for (auto &p : particles)
 	{
 		double new_theta = p.theta + yaw_rate * delta_t;
+		new_theta = normalizeAngle(new_theta);
 		double cal_x = 0.0;
 		double cal_y = 0.0;
 		if (yaw_rate == 0) {
@@ -112,6 +127,7 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 		p.x = dist_x(gen);
 		p.y = dist_y(gen);
 		p.theta = dist_theta(gen);
+		p.theta = normalizeAngle(p.theta);
 	}
 }
 
@@ -138,22 +154,28 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 	//   3.33
 	//   http://planning.cs.uiuc.edu/node99.html
 	std::cout << "updateWeights" << std::endl;
-	for (auto& p : particles)
+	std::cout << "observations : " << observations.size() << std::endl;
+	for (int i=0; i<particles.size(); ++i)
 	{
-		double x_nearest;
-		double y_nearest;
-		double minDist = sensor_range * 10000000.0;
-
+		auto& p = particles.at(i);
 		std::vector<int> associations;
 		std::vector<double> sense_x;
 		std::vector<double> sense_y;
+		std::vector<double> obs_map_x;
+		std::vector<double> obs_map_y;
 
 		for (auto obs : observations)
 		{
+			double x_nearest;
+			double y_nearest;
+			double x_obs_map;
+			double y_obs_map;
+			double minDist = sensor_range * 10000000.0;
+
 			double xm = 0;
 			double ym = 0;
-			convert_coordinate(p.x, p.y, p.theta, obs.x, obs.y, xm, ym);
-
+			convertCoordinate(p.x, p.y, p.theta, obs.x, obs.y, xm, ym);
+			int id;
 			for (auto lmark : map_landmarks.landmark_list)
 			{
 				double norm = dist(xm, ym, lmark.x_f, lmark.y_f);
@@ -162,27 +184,32 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 					minDist = norm;
 					x_nearest = lmark.x_f;
 					y_nearest = lmark.y_f;
-					associations.clear();
-					sense_x.clear();
-					sense_y.clear();
-					associations.push_back(lmark.id_i);
-					sense_x.push_back(lmark.x_f);
-					sense_y.push_back(lmark.y_f);
-				}
-				if (norm == minDist) {
-					associations.push_back(lmark.id_i);
-					sense_x.push_back(lmark.x_f);
-					sense_y.push_back(lmark.y_f);
+					x_obs_map = xm;
+					y_obs_map = ym;
+					id = lmark.id_i;
 				}
 			}
+			std::cout << "minDist: " << minDist << std::endl;
+			if (minDist > sensor_range)
+			{
+				std::cout << "Too large distance to nearest landmark. " << minDist << endl;
+				abort();
+			}
+			associations.push_back(id);
+			sense_x.push_back(x_nearest);
+			sense_y.push_back(y_nearest);
+			obs_map_x.push_back(x_obs_map);
+			obs_map_y.push_back(y_obs_map);
 		}
-		if (minDist > sensor_range)
-		{
-			std::cout << "Too large distance to nearest landmark. " << minDist << endl;
+
+		std::cout << "sense_x.size() : " << sense_x.size() <<std::endl;
+		std::cout << "sense_y.size() : " << sense_y.size() <<std::endl;
+		double weight = 1.0;
+		for (int i=0; i<observations.size(); ++i) {
+			double sw = calculateSingleWeight(obs_map_x.at(i), obs_map_y.at(i), sense_x.at(i), sense_y.at(i), std_landmark[0], std_landmark[1]);
 		}
-		double weight = calculateWeight(p.x, p.y, x_nearest, y_nearest, std_landmark[0], std_landmark[1]);
 		p.weight = weight;
-		weights.push_back(weight);
+		weights.at(i) = weight;
 		p.associations = associations;
 		p.sense_x = sense_x;
 		p.sense_y = sense_y;
@@ -211,7 +238,7 @@ Particle ParticleFilter::SetAssociations(Particle &particle, const std::vector<i
 	// associations: The landmark id that goes along with each listed association
 	// sense_x: the associations x mapping already converted to world coordinates
 	// sense_y: the associations y mapping already converted to world coordinates
-	std::cout << "SetAssociations" << std::endl;
+	// std::cout << "SetAssociations" << std::endl;
 	particle.associations = associations;
 	particle.sense_x = sense_x;
 	particle.sense_y = sense_y;
