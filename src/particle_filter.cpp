@@ -34,8 +34,8 @@ inline void convertCoordinate(double xp,
 							   double &ym)
 {
 	// std::cout << "convertCoordinate" << std::endl;
-	xm = xp + cos(heading) * xc - sin(heading) * yc;
-	ym = yp + sin(heading) * xc + cos(heading) * yc;
+	xm = xp + (cos(heading) * xc) - (sin(heading) * yc);
+	ym = yp + (sin(heading) * xc) + (cos(heading) * yc);
 }
 
 inline double calculateSingleWeight(double xp,
@@ -54,7 +54,7 @@ inline double calculateSingleWeight(double xp,
 	double numera = exp(exponent);
 	
 	double weight =  numera * denom;
-	std::cout << "calculateSingleWeight: " << weight << std::endl;
+	// std::cout << "calculateSingleWeight: " << weight << std::endl;
 	return weight;
 }
 
@@ -154,11 +154,10 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 	//   3.33
 	//   http://planning.cs.uiuc.edu/node99.html
 	std::cout << "updateWeights" << std::endl;
-	std::cout << "observations : " << observations.size() << std::endl;
 	for (int i=0; i<particles.size(); ++i)
 	{
 		auto& p = particles.at(i);
-		std::vector<int> associations;
+		std::vector<int> newAssociations;
 		std::vector<double> sense_x;
 		std::vector<double> sense_y;
 		std::vector<double> obs_map_x;
@@ -168,13 +167,15 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 		{
 			double x_nearest;
 			double y_nearest;
-			double x_obs_map;
-			double y_obs_map;
 			double minDist = sensor_range * 10000000.0;
 
 			double xm = 0;
 			double ym = 0;
 			convertCoordinate(p.x, p.y, p.theta, obs.x, obs.y, xm, ym);
+
+			obs_map_x.push_back(xm);
+			obs_map_y.push_back(ym);
+
 			int id;
 			for (auto lmark : map_landmarks.landmark_list)
 			{
@@ -184,36 +185,28 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 					minDist = norm;
 					x_nearest = lmark.x_f;
 					y_nearest = lmark.y_f;
-					x_obs_map = xm;
-					y_obs_map = ym;
 					id = lmark.id_i;
 				}
 			}
-			std::cout << "minDist: " << minDist << std::endl;
 			if (minDist > sensor_range)
 			{
 				std::cout << "Too large distance to nearest landmark. " << minDist << endl;
-				abort();
+				// abort();
 			}
-			associations.push_back(id);
+			newAssociations.push_back(id);
 			sense_x.push_back(x_nearest);
 			sense_y.push_back(y_nearest);
-			obs_map_x.push_back(x_obs_map);
-			obs_map_y.push_back(y_obs_map);
 		}
 
-		std::cout << "sense_x.size() : " << sense_x.size() <<std::endl;
-		std::cout << "sense_y.size() : " << sense_y.size() <<std::endl;
 		double weight = 1.0;
 		for (int i=0; i<observations.size(); ++i) {
 			double sw = calculateSingleWeight(obs_map_x.at(i), obs_map_y.at(i), sense_x.at(i), sense_y.at(i), std_landmark[0], std_landmark[1]);
+			weight = sw * weight;
 		}
+		std::cout << "Weight : " << weight << endl;
 		p.weight = weight;
 		weights.at(i) = weight;
-		p.associations = associations;
-		p.sense_x = sense_x;
-		p.sense_y = sense_y;
-		SetAssociations(p, associations, sense_x, sense_y);
+		p = SetAssociations(p, newAssociations, sense_x, sense_y);
 	}
 }
 
@@ -225,10 +218,18 @@ void ParticleFilter::resample()
 	std::cout << "resample" << std::endl;
 	default_random_engine gen;
 	discrete_distribution<> dd(weights.begin(), weights.end());
-	for (auto& p : particles) {
-		double w = weights.at(dd(gen));
+	std::vector<Particle> newParticles;
+	std::vector<double> newWeights;
+	for (int i=0; i<particles.size(); ++i) {
+		int index = dd(gen);
+		double w = weights.at(index);
+		auto &p = particles.at(index);
 		p.weight = w;
+		newParticles.push_back(p);
+		newWeights.push_back(w);
 	}
+	particles = newParticles;
+	weights = newWeights;
 }
 
 Particle ParticleFilter::SetAssociations(Particle &particle, const std::vector<int> &associations,
@@ -247,12 +248,12 @@ Particle ParticleFilter::SetAssociations(Particle &particle, const std::vector<i
 
 string ParticleFilter::getAssociations(Particle best)
 {
-	std::cout << "getAssociations" << std::endl;
 	vector<int> v = best.associations;
 	stringstream ss;
 	copy(v.begin(), v.end(), ostream_iterator<int>(ss, " "));
 	string s = ss.str();
 	s = s.substr(0, s.length() - 1); // get rid of the trailing space
+	// std::cout << "getAssociations: " << s << std::endl;
 	return s;
 }
 string ParticleFilter::getSenseX(Particle best)
@@ -262,15 +263,16 @@ string ParticleFilter::getSenseX(Particle best)
 	copy(v.begin(), v.end(), ostream_iterator<float>(ss, " "));
 	string s = ss.str();
 	s = s.substr(0, s.length() - 1); // get rid of the trailing space
+	// std::cout << "getSenseX: " << s << std::endl;
 	return s;
 }
 string ParticleFilter::getSenseY(Particle best)
 {
-	std::cout << "getSenseY" << std::endl;
 	vector<double> v = best.sense_y;
 	stringstream ss;
 	copy(v.begin(), v.end(), ostream_iterator<float>(ss, " "));
 	string s = ss.str();
 	s = s.substr(0, s.length() - 1); // get rid of the trailing space
+	// std::cout << "getSenseY: " << s << std::endl;
 	return s;
 }
