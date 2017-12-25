@@ -58,17 +58,6 @@ inline double calculateSingleWeight(double xp,
 	return weight;
 }
 
-inline double normalizeAngle(double angle)
-{
-	while (angle > M_PI) {
-		angle -= 2.0 * M_PI;
-	}
-	while (angle < -M_PI) {
-		angle += 2.0 * M_PI;
-	}
-	return angle;
-}
-
 void ParticleFilter::init(double x, double y, double theta, double std[])
 {
 	// TODO: Set the number of particles. Initialize all particles to first position (based on estimates of
@@ -76,7 +65,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[])
 	// Add random Gaussian noise to each particle.
 	// NOTE: Consult particle_filter.h for more information about this method (and others in this file).
 	std::cout << "init" << std::endl;
-	num_particles = 10;
+	num_particles = 200;
 	default_random_engine gen;
 	normal_distribution<double> dist_x(x, std[0]);
 	normal_distribution<double> dist_y(y, std[1]);
@@ -87,7 +76,6 @@ void ParticleFilter::init(double x, double y, double theta, double std[])
 		sample_x = dist_x(gen);
 		sample_y = dist_y(gen);
 		sample_theta = dist_theta(gen);
-		sample_theta = normalizeAngle(sample_theta);
 		Particle p;
 		p.id = i;
 		p.x = sample_x;
@@ -111,7 +99,6 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 	for (auto &p : particles)
 	{
 		double new_theta = p.theta + yaw_rate * delta_t;
-		new_theta = normalizeAngle(new_theta);
 		double cal_x = 0.0;
 		double cal_y = 0.0;
 		if (yaw_rate == 0) {
@@ -127,7 +114,6 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 		p.x = dist_x(gen);
 		p.y = dist_y(gen);
 		p.theta = dist_theta(gen);
-		p.theta = normalizeAngle(p.theta);
 	}
 }
 
@@ -203,7 +189,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 			double sw = calculateSingleWeight(obs_map_x.at(i), obs_map_y.at(i), sense_x.at(i), sense_y.at(i), std_landmark[0], std_landmark[1]);
 			weight = sw * weight;
 		}
-		std::cout << "Weight : " << weight << endl;
+		// std::cout << "Weight : " << weight << endl;
 		p.weight = weight;
 		weights.at(i) = weight;
 		p = SetAssociations(p, newAssociations, sense_x, sense_y);
